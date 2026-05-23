@@ -1,0 +1,2890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LaPlante Appraisals — Time Tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   CSS VARIABLES & THEME
+   ============================================================ */
+:root {
+  --gold:        #9a9559;
+  --gold-light:  #b8b170;
+  --gold-dark:   #7a7540;
+  --black:       #010101;
+  --gray-light:  #f0efef;
+  --white:       #ffffff;
+
+  /* Light theme */
+  --bg:          #f5f4f0;
+  --surface:     #ffffff;
+  --surface2:    #f0efef;
+  --border:      #e2e1dc;
+  --text:        #1a1a18;
+  --text-muted:  #6b6b60;
+  --text-subtle: #9a9a8e;
+  --shadow:      0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.12);
+  --shadow-xl:   0 16px 48px rgba(0,0,0,0.16);
+
+  --radius-sm:   8px;
+  --radius:      14px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+
+  --transition:  0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body:    'DM Sans', -apple-system, sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg:          #0e0e0c;
+  --surface:     #1a1a17;
+  --surface2:    #242420;
+  --border:      #2e2e28;
+  --text:        #f0efef;
+  --text-muted:  #9a9a8e;
+  --text-subtle: #5a5a52;
+  --shadow:      0 2px 12px rgba(0,0,0,0.3);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.4);
+  --shadow-xl:   0 16px 48px rgba(0,0,0,0.5);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background var(--transition-slow), color var(--transition-slow);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: var(--transition);
+}
+
+input, select, textarea {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  width: 100%;
+  outline: none;
+  transition: var(--transition);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(154,149,89,0.15);
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+.hidden    { display: none !important; }
+.flex      { display: flex; }
+.flex-col  { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm    { gap: 8px; }
+.gap-md    { gap: 16px; }
+.gap-lg    { gap: 24px; }
+.mt-sm     { margin-top: 8px; }
+.mt-md     { margin-top: 16px; }
+.mt-lg     { margin-top: 24px; }
+.w-full    { width: 100%; }
+.text-center { text-align: center; }
+.text-muted  { color: var(--text-muted); }
+.text-subtle { color: var(--text-subtle); }
+.text-gold   { color: var(--gold); }
+.text-sm   { font-size: 0.85rem; }
+.text-xs   { font-size: 0.75rem; }
+.font-600  { font-weight: 600; }
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  animation: toastIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 320px;
+}
+
+.toast.success { border-left: 4px solid #4caf74; }
+.toast.error   { border-left: 4px solid #e05252; }
+.toast.info    { border-left: 4px solid var(--gold); }
+
+.toast-icon { font-size: 1.1rem; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   MODAL / DIALOG
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: var(--shadow-xl);
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.modal p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-height: 44px;
+  transition: var(--transition);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.btn-ghost:hover { background: var(--border); }
+
+.btn-danger {
+  background: #e05252;
+  color: #fff;
+}
+.btn-danger:hover { background: #c94444; }
+
+.btn-lg {
+  padding: 18px 28px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  min-height: 56px;
+}
+
+.btn-xl {
+  padding: 22px 36px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-radius: var(--radius-lg);
+  min-height: 70px;
+  letter-spacing: 0.02em;
+  width: 100%;
+}
+
+.btn-clock-in {
+  background: linear-gradient(135deg, #4caf74 0%, #3d9960 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(76,175,116,0.3);
+}
+.btn-clock-in:hover { box-shadow: 0 6px 28px rgba(76,175,116,0.4); transform: translateY(-2px); }
+
+.btn-clock-out {
+  background: linear-gradient(135deg, #e05252 0%, #c94444 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(224,82,82,0.3);
+}
+.btn-clock-out:hover { box-shadow: 0 6px 28px rgba(224,82,82,0.4); transform: translateY(-2px); }
+
+/* ============================================================
+   LOADING SCREEN
+   ============================================================ */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  transition: opacity 0.4s ease;
+}
+
+.loading-logo {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.loading-sub {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+#app { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ============================================================
+   HEADER / NAV
+   ============================================================ */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+
+.header-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.header-logo {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-user {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.header-user strong {
+  color: var(--text);
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: var(--text);
+  transition: var(--transition);
+  min-height: 40px;
+}
+.icon-btn:hover { background: var(--border); }
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.main-content {
+  flex: 1;
+  padding: 32px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ============================================================
+   LOGIN / EMPLOYEE SELECT SCREEN
+   ============================================================ */
+#login-screen {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.login-logo {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.login-sub {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.login-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 680px;
+}
+
+.employee-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow);
+}
+
+.employee-card:hover {
+  border-color: var(--gold);
+  box-shadow: 0 6px 28px rgba(154,149,89,0.15);
+  transform: translateY(-3px);
+}
+
+.employee-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 auto 14px;
+  font-family: var(--font-display);
+}
+
+.employee-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.employee-role {
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+  letter-spacing: 0.05em;
+}
+
+/* PIN Modal */
+.pin-display {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  transition: var(--transition);
+}
+
+.pin-dot.filled { background: var(--gold); }
+
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.pin-key {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  transition: var(--transition);
+  min-height: 58px;
+}
+.pin-key:hover { background: var(--gold); color: #fff; border-color: var(--gold); }
+.pin-key:active { transform: scale(0.96); }
+
+.pin-key.delete { font-size: 1rem; }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+  margin-top: 2px;
+}
+
+/* ============================================================
+   STATUS BADGE
+   ============================================================ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.status-badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.status-in {
+  background: rgba(76,175,116,0.12);
+  color: #3d9960;
+}
+.status-in::before { background: #4caf74; box-shadow: 0 0 0 2px rgba(76,175,116,0.3); animation: pulse 1.5s ease infinite; }
+
+.status-out {
+  background: rgba(154,149,89,0.12);
+  color: var(--gold-dark);
+}
+.status-out::before { background: var(--gold); }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(76,175,116,0.3); }
+  50% { box-shadow: 0 0 0 5px rgba(76,175,116,0.1); }
+}
+
+/* ============================================================
+   CLOCK DISPLAY
+   ============================================================ */
+.clock-display {
+  text-align: center;
+  padding: 32px 20px;
+}
+
+.clock-time {
+  font-family: var(--font-display);
+  font-size: 4.5rem;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.clock-date {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  letter-spacing: 0.03em;
+}
+
+.elapsed-timer {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  color: #4caf74;
+  margin-top: 16px;
+}
+
+.elapsed-label {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   STATS ROW
+   ============================================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  margin-top: 6px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   TIME ENTRIES TABLE
+   ============================================================ */
+.entries-list { display: flex; flex-direction: column; gap: 10px; }
+
+.entry-row {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.entry-meta { display: flex; flex-direction: column; gap: 5px; }
+
+.entry-date {
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.entry-times {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.entry-duration {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.entry-notes {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.entry-open {
+  border-left: 3px solid #4caf74;
+}
+
+.entry-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.entry-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: var(--transition);
+  min-height: 34px;
+}
+
+.entry-btn-edit {
+  background: rgba(154,149,89,0.1);
+  color: var(--gold-dark);
+  border: 1.5px solid rgba(154,149,89,0.2);
+}
+.entry-btn-edit:hover { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+.entry-btn-delete {
+  background: rgba(224,82,82,0.1);
+  color: #e05252;
+  border: 1.5px solid rgba(224,82,82,0.2);
+}
+.entry-btn-delete:hover { background: #e05252; color: #fff; border-color: #e05252; }
+
+/* ============================================================
+   PAY PERIOD NAV
+   ============================================================ */
+.period-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.period-label {
+  flex: 1;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.period-sub {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  text-align: center;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ============================================================
+   ADMIN SPECIFIC
+   ============================================================ */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(154,149,89,0.12);
+  color: var(--gold-dark);
+  border: 1px solid rgba(154,149,89,0.3);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.employee-summary-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.employee-summary-card:hover {
+  border-color: var(--gold);
+  box-shadow: 0 4px 20px rgba(154,149,89,0.12);
+  transform: translateY(-2px);
+}
+
+.employee-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.employee-summary-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+
+.employee-summary-name { font-size: 1rem; font-weight: 600; }
+.employee-summary-role { font-size: 0.78rem; color: var(--text-subtle); margin-top: 2px; }
+
+.employee-summary-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.summary-stat { flex: 1; }
+.summary-stat-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; color: var(--gold); }
+.summary-stat-label { font-size: 0.72rem; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+/* Active indicator dot */
+.active-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4caf74;
+  box-shadow: 0 0 0 3px rgba(76,175,116,0.2);
+  animation: pulse 1.5s ease infinite;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-subtle);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.empty-text { font-size: 0.875rem; line-height: 1.5; }
+
+/* ============================================================
+   SECTION HEADER
+   ============================================================ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* ============================================================
+   TABS (Admin)
+   ============================================================ */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 14px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: var(--transition);
+  min-height: 40px;
+}
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* ============================================================
+   SETTINGS / CONFIG PANEL
+   ============================================================ */
+.settings-section {
+  margin-bottom: 28px;
+}
+
+.settings-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.settings-row-label { font-size: 0.9rem; font-weight: 500; }
+.settings-row-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  #loading-screen,
+  .app-header,
+  .tab-bar,
+  .period-nav button,
+  .entry-actions,
+  .btn,
+  .icon-btn,
+  #toast-container,
+  .modal-overlay,
+  .no-print { display: none !important; }
+
+  .main-content { padding: 0; max-width: 100%; }
+
+  .card, .entry-row, .stat-card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .print-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid #9a9559;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+
+  .print-title { font-size: 1.4rem; font-weight: 700; color: #9a9559; }
+  .print-sub   { font-size: 0.85rem; color: #666; margin-top: 4px; }
+}
+
+.print-header { display: none; }
+
+/* ============================================================
+   CONNECTION STATUS BAR
+   ============================================================ */
+.conn-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  text-align: center;
+  font-weight: 500;
+  z-index: 9998;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+.conn-bar.show { transform: translateY(0); }
+.conn-bar.offline { background: #e05252; color: #fff; }
+.conn-bar.reconnecting { background: var(--gold); color: #fff; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 600px) {
+  .main-content { padding: 20px 16px; }
+  .clock-time { font-size: 3.2rem; }
+  .employee-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .app-header { padding: 0 16px; }
+  .header-logo { font-size: 1.1rem; }
+  .modal { padding: 24px 18px; }
+  .employee-summary-stats { flex-direction: column; gap: 8px; }
+}
+
+@media (max-width: 380px) {
+  .clock-time { font-size: 2.8rem; }
+}
+
+/* Offline state animation */
+.offline-pulse { animation: offlinePulse 2s ease infinite; }
+@keyframes offlinePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+/* Form group */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* Back button */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  min-height: 44px;
+}
+.back-btn:hover { background: var(--surface2); color: var(--text); }
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* Overflow x scroll wrapper */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SETUP / CONFIGURATION — EDIT PIN VALUES HERE
+     ============================================================ -->
+<script>
+// ============================================================
+// CONFIGURATION — MODIFY HERE
+// ============================================================
+const CONFIG = {
+  // Employee PINs — easy to edit
+  PINS: {
+    'lovelyn-relayo':    '1234',
+    'gabriella-welker':  '2345',
+    'kari-lang':         '0000',
+  },
+
+  // Pay period settings
+  PAY_PERIOD_TYPE: 'biweekly', // 'weekly' or 'biweekly'
+  PAY_PERIOD_START_DAY: 1,     // 0=Sunday, 1=Monday
+
+  // Supabase — REPLACE THESE with your actual values
+  SUPABASE_URL: 'https://nfojyhanywyqmuiwmalw.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_lFtjLq6FFck1Zyr9hJdPcw_x8YYjhKZ',
+
+  // Admin user ID
+  ADMIN_EMPLOYEE_ID: 'kari-lang',
+};
+
+// ============================================================
+// EMPLOYEES DATA
+// ============================================================
+const EMPLOYEES = [
+  {
+    id: 'lovelyn-relayo',
+    name: 'Lovelyn Relayo',
+    role: 'Operations Specialist',
+    initials: 'LR',
+  },
+  {
+    id: 'gabriella-welker',
+    name: 'Gabriella Welker',
+    role: 'Appraisal Assistant Intern',
+    initials: 'GW',
+  },
+  {
+    id: 'kari-lang',
+    name: 'Kari Lang',
+    role: 'Owner / Administrator',
+    initials: 'KL',
+  },
+];
+</script>
+
+<!-- ============================================================
+     CONNECTION STATUS BAR
+     ============================================================ -->
+<div id="conn-bar" class="conn-bar"></div>
+
+<!-- ============================================================
+     LOADING SCREEN
+     ============================================================ -->
+<div id="loading-screen">
+  <div class="loading-logo">LaPlante Appraisals</div>
+  <div class="loading-sub">Residential Real Estate Appraisals</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<!-- ============================================================
+     TOAST CONTAINER
+     ============================================================ -->
+<div id="toast-container"></div>
+
+<!-- ============================================================
+     LOGIN SCREEN
+     ============================================================ -->
+<div id="login-screen" class="hidden">
+  <div class="login-header">
+    <div class="login-logo">LaPlante Appraisals</div>
+    <div class="login-sub">Time Tracking</div>
+  </div>
+
+  <p class="login-title">Who's clocking in today?</p>
+
+  <div class="employee-grid" id="employee-grid"></div>
+
+  <!-- Theme toggle on login -->
+  <button class="icon-btn" onclick="toggleTheme()" style="margin-top:32px;" aria-label="Toggle theme">
+    <span id="login-theme-icon">🌙</span>
+  </button>
+</div>
+
+<!-- ============================================================
+     MAIN APP (shown after login)
+     ============================================================ -->
+<div id="app" class="hidden">
+  <!-- Header -->
+  <header class="app-header no-print">
+    <div class="header-brand">
+      <span class="header-logo">LaPlante Appraisals</span>
+    </div>
+    <div class="header-actions">
+      <span class="header-user" id="header-user-name"></span>
+      <button class="icon-btn" onclick="toggleTheme()" aria-label="Toggle theme" id="theme-btn">🌙</button>
+      <button class="icon-btn" onclick="logout()" aria-label="Logout" title="Log out">🚪</button>
+    </div>
+  </header>
+
+  <!-- Employee View -->
+  <div id="employee-view" class="hidden">
+    <main class="main-content">
+
+      <!-- Print Header (hidden on screen) -->
+      <div class="print-header" id="print-header">
+        <div class="print-title">LaPlante Appraisals — Payroll Report</div>
+        <div class="print-sub" id="print-sub"></div>
+      </div>
+
+      <!-- Clock Card -->
+      <div class="card" style="margin-bottom:24px;" id="clock-card">
+        <div class="clock-display">
+          <div class="clock-time" id="live-clock">12:00:00</div>
+          <div class="clock-date" id="live-date"></div>
+          <div id="elapsed-wrapper" class="hidden">
+            <div class="elapsed-timer" id="elapsed-timer">0:00:00</div>
+            <div class="elapsed-label">Shift Duration</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;margin-bottom:16px;">
+          <span class="status-badge" id="status-badge">Clocked Out</span>
+        </div>
+        <button class="btn btn-xl btn-clock-in" id="clock-in-btn" onclick="clockIn()">
+          ⏱ Clock In
+        </button>
+        <button class="btn btn-xl btn-clock-out hidden" id="clock-out-btn" onclick="clockOut()">
+          ⏹ Clock Out
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-period-hours">0.0</div>
+          <div class="stat-label">Period Hours</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-today-hours">0.0</div>
+          <div class="stat-label">Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-shifts">0</div>
+          <div class="stat-label">Shifts</div>
+        </div>
+      </div>
+
+      <!-- Pay Period Nav -->
+      <div class="period-nav no-print">
+        <button class="icon-btn" onclick="changePeriod(-1)" aria-label="Previous period">‹</button>
+        <div style="flex:1;text-align:center;">
+          <div class="period-label" id="period-label">Loading...</div>
+          <span class="period-sub" id="period-sub"></span>
+        </div>
+        <button class="icon-btn" onclick="changePeriod(1)" aria-label="Next period">›</button>
+      </div>
+
+      <!-- Shift History -->
+      <div class="section-header no-print">
+        <h2 class="section-title">Shift History</h2>
+        <button class="btn btn-ghost" onclick="printReport()" style="font-size:0.8rem;padding:8px 14px;">🖨 Print</button>
+      </div>
+      <div id="entries-list">
+        <div class="empty-state">
+          <div class="empty-icon">⏱</div>
+          <div class="empty-title">No shifts recorded</div>
+          <div class="empty-text">Clock in to start tracking your time.</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Admin View -->
+  <div id="admin-view" class="hidden">
+    <main class="main-content">
+
+      <!-- Print Header -->
+      <div class="print-header" id="admin-print-header">
+        <div class="print-title">LaPlante Appraisals — Payroll Report</div>
+        <div class="print-sub" id="admin-print-sub"></div>
+      </div>
+
+      <!-- Admin Header -->
+      <div class="flex items-center justify-between" style="margin-bottom:20px;" id="admin-top">
+        <div>
+          <h1 style="font-family:var(--font-display);font-size:1.8rem;font-weight:700;">Admin Dashboard</h1>
+          <p style="font-size:0.85rem;color:var(--text-subtle);margin-top:2px;">Real-time company overview</p>
+        </div>
+        <span class="admin-badge">⚙ Admin</span>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar no-print" id="admin-tabs">
+        <button class="tab-btn active" onclick="switchAdminTab('overview')" id="tab-overview">Overview</button>
+        <button class="tab-btn" onclick="switchAdminTab('payroll')" id="tab-payroll">Payroll</button>
+        <button class="tab-btn" onclick="switchAdminTab('settings')" id="tab-settings">Settings</button>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div id="tab-content-overview">
+        <!-- Company stats -->
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-value" id="admin-stat-total">0.0</div>
+            <div class="stat-label">Company Hours</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="admin-stat-active">0</div>
+            <div class="stat-label">Active Now</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="admin-stat-shifts">0</div>
+            <div class="stat-label">Total Shifts</div>
+          </div>
+        </div>
+
+        <!-- Period Nav -->
+        <div class="period-nav no-print">
+          <button class="icon-btn" onclick="changeAdminPeriod(-1)">‹</button>
+          <div style="flex:1;text-align:center;">
+            <div class="period-label" id="admin-period-label">Loading...</div>
+            <span class="period-sub" id="admin-period-sub"></span>
+          </div>
+          <button class="icon-btn" onclick="changeAdminPeriod(1)">›</button>
+        </div>
+
+        <!-- Employee cards -->
+        <div class="section-header">
+          <h2 class="section-title">Team Members</h2>
+        </div>
+        <div id="admin-employee-cards" style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px;"></div>
+
+        <!-- Drill-down view -->
+        <div id="admin-drilldown" class="hidden">
+          <button class="back-btn" onclick="closeAdminDrilldown()">← Back to Overview</button>
+          <div id="admin-drilldown-content"></div>
+        </div>
+      </div>
+
+      <!-- PAYROLL TAB -->
+      <div id="tab-content-payroll" class="hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div>
+            <h2 class="section-title" style="font-family:var(--font-display);">Payroll Overview</h2>
+            <div id="payroll-period-info" style="font-size:0.8rem;color:var(--text-subtle);margin-top:2px;"></div>
+          </div>
+          <button class="btn btn-ghost" onclick="printAdminReport()" style="font-size:0.8rem;padding:8px 14px;">🖨 Print</button>
+        </div>
+
+        <div class="period-nav no-print">
+          <button class="icon-btn" onclick="changeAdminPeriod(-1)">‹</button>
+          <div style="flex:1;text-align:center;">
+            <div class="period-label" id="payroll-period-label">Loading...</div>
+          </div>
+          <button class="icon-btn" onclick="changeAdminPeriod(1)">›</button>
+        </div>
+
+        <div class="card">
+          <div id="payroll-table-wrapper">
+            <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Loading payroll data...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="tab-content-settings" class="hidden">
+        <div class="card">
+          <h2 class="section-title" style="font-family:var(--font-display);margin-bottom:20px;">Pay Period Settings</h2>
+
+          <div class="settings-section">
+            <div class="settings-label">Pay Period Type</div>
+            <select id="setting-period-type" onchange="saveSettings()" style="margin-bottom:8px;">
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly</option>
+            </select>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-label">Period Start Day</div>
+            <select id="setting-start-day" onchange="saveSettings()">
+              <option value="0">Sunday</option>
+              <option value="1">Monday</option>
+              <option value="2">Tuesday</option>
+              <option value="3">Wednesday</option>
+              <option value="4">Thursday</option>
+              <option value="5">Friday</option>
+              <option value="6">Saturday</option>
+            </select>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="settings-section">
+            <div class="settings-label">Appearance</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Dark Mode</div>
+                <div class="settings-row-desc">Switch between light and dark theme</div>
+              </div>
+              <button class="btn btn-ghost" onclick="toggleTheme()" style="padding:8px 16px;font-size:0.85rem;">
+                Toggle Theme
+              </button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div style="background:rgba(154,149,89,0.08);border:1.5px solid rgba(154,149,89,0.2);border-radius:var(--radius);padding:16px;margin-top:8px;">
+            <div style="font-size:0.8rem;font-weight:600;color:var(--gold-dark);margin-bottom:8px;">💡 Supabase Setup</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;">
+              Edit <code style="background:var(--surface2);padding:2px 5px;border-radius:4px;">CONFIG.SUPABASE_URL</code> and
+              <code style="background:var(--surface2);padding:2px 5px;border-radius:4px;">CONFIG.SUPABASE_ANON_KEY</code>
+              near the top of this HTML file to connect to your Supabase project.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     SETUP INSTRUCTIONS MODAL (shown when Supabase not configured)
+     ============================================================ -->
+<div id="setup-modal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:540px;">
+    <h3>🚀 Supabase Setup Required</h3>
+    <p>Before using the app, you need to connect a Supabase database. Follow these steps:</p>
+
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;font-size:0.8rem;line-height:1.8;color:var(--text-muted);font-family:monospace;max-height:360px;overflow-y:auto;">
+      <strong style="color:var(--gold);">1. Create Supabase Project</strong><br>
+      Go to supabase.com → New Project → Free tier<br><br>
+
+      <strong style="color:var(--gold);">2. Run SQL Schema</strong><br>
+      Open SQL Editor in Supabase and run:<br><br>
+
+      <pre style="white-space:pre-wrap;font-size:0.72rem;color:var(--text);">-- Employees table
+CREATE TABLE employees (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Time entries
+CREATE TABLE time_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id TEXT REFERENCES employees(id),
+  clock_in TIMESTAMPTZ NOT NULL,
+  clock_out TIMESTAMPTZ,
+  total_hours NUMERIC(5,2),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- App settings
+CREATE TABLE app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_time_entries_employee ON time_entries(employee_id);
+CREATE INDEX idx_time_entries_clock_in ON time_entries(clock_in);
+
+-- Disable RLS for simplicity with anon key
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE time_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+-- Allow all operations via anon key (app handles auth via PIN)
+CREATE POLICY "Allow all" ON employees FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON time_entries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON app_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed employees
+INSERT INTO employees (id, name, role) VALUES
+  ('lovelyn-relayo',   'Lovelyn Relayo',   'Operations Specialist'),
+  ('gabriella-welker', 'Gabriella Welker',  'Appraisal Assistant Intern'),
+  ('kari-lang',        'Kari Lang',         'Owner / Administrator');
+</pre>
+
+      <strong style="color:var(--gold);">3. Get Credentials</strong><br>
+      Project Settings → API → copy "Project URL" and "anon public" key<br><br>
+
+      <strong style="color:var(--gold);">4. Add to HTML File</strong><br>
+      Edit CONFIG.SUPABASE_URL and CONFIG.SUPABASE_ANON_KEY at top of script<br><br>
+
+      <strong style="color:var(--gold);">5. Deploy to Netlify</strong><br>
+      Drag-and-drop this HTML file onto netlify.com/drop
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="continueWithoutSupabase()">Continue Offline</button>
+      <a href="https://supabase.com" target="_blank" class="btn btn-primary">Open Supabase ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN JAVASCRIPT
+     ============================================================ -->
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentUser = null;
+let currentPeriodOffset = 0;
+let adminPeriodOffset = 0;
+let liveClockInterval = null;
+let elapsedInterval = null;
+let activeEntry = null;
+let supabaseConfigured = false;
+let realtimeChannel = null;
+let allEntriesCache = {};
+let settingsCache = {};
+let adminActiveTab = 'overview';
+let adminDrilldownEmployee = null;
+
+// In-memory fallback store
+const memoryStore = { entries: [], settings: {} };
+
+// ============================================================
+// SUPABASE CLIENT
+// ============================================================
+class SupabaseClient {
+  constructor(url, key) {
+    this.url = url;
+    this.key = key;
+    this.headers = {
+      'apikey': key,
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+    };
+  }
+
+  async request(path, method = 'GET', body = null, extra = {}) {
+    try {
+      const res = await fetch(`${this.url}/rest/v1${path}`, {
+        method,
+        headers: { ...this.headers, ...extra },
+        body: body ? JSON.stringify(body) : null,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `HTTP ${res.status}`);
+      }
+      if (res.status === 204) return [];
+      return res.json();
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  from(table) {
+    return new QueryBuilder(this, table);
+  }
+
+  channel(name) {
+    // Minimal realtime via polling
+    return { on: () => ({ subscribe: () => {} }) };
+  }
+}
+
+class QueryBuilder {
+  constructor(client, table) {
+    this.client = client;
+    this.table = table;
+    this._filters = [];
+    this._select = '*';
+    this._order = null;
+    this._single = false;
+    this._upsertData = null;
+  }
+
+  select(cols = '*') { this._select = cols; return this; }
+  eq(col, val) { this._filters.push(`${col}=eq.${encodeURIComponent(val)}`); return this; }
+  gte(col, val) { this._filters.push(`${col}=gte.${encodeURIComponent(val)}`); return this; }
+  lte(col, val) { this._filters.push(`${col}=lte.${encodeURIComponent(val)}`); return this; }
+  is(col, val) { this._filters.push(`${col}=is.${val}`); return this; }
+  order(col, opts = {}) { this._order = `${col}.${opts.ascending === false ? 'desc' : 'asc'}`; return this; }
+  limit(n) { this._limit = n; return this; }
+  single() { this._single = true; return this; }
+
+  _buildUrl(method) {
+    let url = `/${this.table}?select=${this._select}`;
+    for (const f of this._filters) url += `&${f}`;
+    if (this._order) url += `&order=${this._order}`;
+    if (this._limit) url += `&limit=${this._limit}`;
+    return url;
+  }
+
+  async get() {
+    const url = this._buildUrl();
+    const data = await this.client.request(url);
+    if (this._single) return { data: data[0] || null, error: null };
+    return { data: data || [], error: null };
+  }
+
+  async insert(body) {
+    try {
+      const data = await this.client.request(`/${this.table}`, 'POST', body);
+      return { data: data[0] || data, error: null };
+    } catch (e) { return { data: null, error: e }; }
+  }
+
+  async update(body) {
+    let url = `/${this.table}?`;
+    url += this._filters.join('&');
+    try {
+      const data = await this.client.request(url, 'PATCH', body);
+      return { data, error: null };
+    } catch (e) { return { data: null, error: e }; }
+  }
+
+  async delete() {
+    let url = `/${this.table}?`;
+    url += this._filters.join('&');
+    try {
+      await this.client.request(url, 'DELETE', null, { 'Prefer': '' });
+      return { error: null };
+    } catch (e) { return { error: e }; }
+  }
+
+  async upsert(body) {
+    try {
+      const data = await this.client.request(
+        `/${this.table}`,
+        'POST',
+        body,
+        { 'Prefer': 'return=representation,resolution=merge-duplicates' }
+      );
+      return { data, error: null };
+    } catch (e) { return { data: null, error: e }; }
+  }
+}
+
+let db = null;
+
+function initSupabase() {
+  if (CONFIG.SUPABASE_URL.includes('YOUR_PROJECT_ID') ||
+      CONFIG.SUPABASE_ANON_KEY.includes('YOUR_ANON_KEY')) {
+    return false;
+  }
+  db = new SupabaseClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  return true;
+}
+
+// ============================================================
+// MEMORY FALLBACK (when Supabase not configured)
+// ============================================================
+function memGet(employeeId) {
+  return memoryStore.entries.filter(e => e.employee_id === employeeId);
+}
+function memGetAll() { return [...memoryStore.entries]; }
+function memInsert(entry) {
+  const e = { ...entry, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  memoryStore.entries.push(e);
+  return e;
+}
+function memUpdate(id, patch) {
+  const idx = memoryStore.entries.findIndex(e => e.id === id);
+  if (idx >= 0) memoryStore.entries[idx] = { ...memoryStore.entries[idx], ...patch, updated_at: new Date().toISOString() };
+}
+function memDelete(id) {
+  memoryStore.entries = memoryStore.entries.filter(e => e.id !== id);
+}
+
+// ============================================================
+// DATA ACCESS LAYER
+// ============================================================
+
+// Tracks whether live DB is reachable (vs. memory fallback)
+let dbReachable = false;
+
+async function safeQuery(fn, fallback) {
+  if (!supabaseConfigured || !dbReachable) return fallback;
+  try {
+    return await fn();
+  } catch (e) {
+    console.warn('DB query failed, using memory fallback:', e.message);
+    showDbWarning();
+    return fallback;
+  }
+}
+
+function showDbWarning() {
+  const existing = document.getElementById('db-warning-bar');
+  if (existing) return;
+  const bar = document.createElement('div');
+  bar.id = 'db-warning-bar';
+  bar.style.cssText = `
+    background: #e05252; color: #fff; text-align: center;
+    padding: 10px 16px; font-size: 0.82rem; font-weight: 500;
+    position: sticky; top: 64px; z-index: 99; letter-spacing: 0.01em;
+  `;
+  bar.innerHTML = `⚠️ Database unreachable — running in offline mode. Open this file directly in your browser or deploy to Netlify for full functionality.`;
+  const app = document.getElementById('app');
+  if (app) app.prepend(bar);
+}
+
+async function testDbConnection() {
+  if (!supabaseConfigured) { dbReachable = false; return false; }
+  try {
+    const res = await fetch(
+      `${CONFIG.SUPABASE_URL}/rest/v1/employees?select=id&limit=1`,
+      { headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}` } }
+    );
+    dbReachable = res.ok;
+    return res.ok;
+  } catch (e) {
+    dbReachable = false;
+    return false;
+  }
+}
+
+async function getEntries(employeeId) {
+  return safeQuery(async () => {
+    const { data, error } = await db.from('time_entries').select('*').eq('employee_id', employeeId).order('clock_in', { ascending: false }).get();
+    if (error) throw new Error(error.message);
+    return data || [];
+  }, memGet(employeeId));
+}
+
+async function getAllEntries() {
+  return safeQuery(async () => {
+    const { data, error } = await db.from('time_entries').select('*').order('clock_in', { ascending: false }).get();
+    if (error) throw new Error(error.message);
+    return data || [];
+  }, memGetAll());
+}
+
+async function insertEntry(entry) {
+  if (!supabaseConfigured || !dbReachable) return { data: memInsert(entry), error: null };
+  try {
+    return await db.from('time_entries').insert(entry);
+  } catch (e) {
+    showDbWarning();
+    return { data: memInsert(entry), error: null };
+  }
+}
+
+async function updateEntry(id, patch) {
+  if (!supabaseConfigured || !dbReachable) { memUpdate(id, patch); return { error: null }; }
+  try {
+    return await db.from('time_entries').eq('id', id).update({ ...patch, updated_at: new Date().toISOString() });
+  } catch (e) {
+    showDbWarning();
+    memUpdate(id, patch);
+    return { error: null };
+  }
+}
+
+async function deleteEntry(id) {
+  if (!supabaseConfigured || !dbReachable) { memDelete(id); return { error: null }; }
+  try {
+    return await db.from('time_entries').eq('id', id).delete();
+  } catch (e) {
+    showDbWarning();
+    memDelete(id);
+    return { error: null };
+  }
+}
+
+async function getOpenEntry(employeeId) {
+  return safeQuery(async () => {
+    const { data } = await db.from('time_entries').select('*').eq('employee_id', employeeId).is('clock_out', 'null').limit(1).single().get();
+    return data || null;
+  }, memoryStore.entries.find(e => e.employee_id === employeeId && !e.clock_out) || null);
+}
+
+async function loadSettings() {
+  const defaults = {
+    period_type: CONFIG.PAY_PERIOD_TYPE,
+    start_day: CONFIG.PAY_PERIOD_START_DAY.toString(),
+  };
+  return safeQuery(async () => {
+    const { data } = await db.from('app_settings').select('*').get();
+    const s = {};
+    if (data) data.forEach(row => { s[row.key] = row.value; });
+    return {
+      period_type: s.period_type || defaults.period_type,
+      start_day: s.start_day || defaults.start_day,
+    };
+  }, defaults);
+}
+
+async function saveSettingDB(key, value) {
+  memoryStore.settings[key] = value;
+  if (!supabaseConfigured || !dbReachable) return;
+  try {
+    await db.from('app_settings').upsert({ key, value, updated_at: new Date().toISOString() });
+  } catch (e) { /* silent */ }
+}
+
+// ============================================================
+// PAY PERIOD UTILITIES
+// ============================================================
+function getPeriodBounds(offset = 0, settings = settingsCache) {
+  const periodType = settings.period_type || 'biweekly';
+  const startDay = parseInt(settings.start_day || '1');
+  const now = new Date();
+  const dayMs = 86400000;
+
+  // Find the most recent start day
+  let start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  const currentDay = start.getDay();
+  let diff = (currentDay - startDay + 7) % 7;
+  start.setTime(start.getTime() - diff * dayMs);
+
+  if (periodType === 'biweekly') {
+    // Snap to the nearest 2-week boundary from a reference date
+    const ref = new Date('2024-01-01');
+    const refDay = ref.getDay();
+    let refStart = new Date(ref);
+    let d = (refDay - startDay + 7) % 7;
+    refStart.setTime(refStart.getTime() - d * dayMs);
+
+    const weeksSinceRef = Math.floor((start.getTime() - refStart.getTime()) / (14 * dayMs));
+    start = new Date(refStart.getTime() + weeksSinceRef * 14 * dayMs);
+  }
+
+  // Apply offset
+  const periodDays = periodType === 'biweekly' ? 14 : 7;
+  start.setTime(start.getTime() + offset * periodDays * dayMs);
+
+  const end = new Date(start);
+  end.setTime(end.getTime() + periodDays * dayMs - 1);
+
+  return { start, end };
+}
+
+function formatPeriodLabel(bounds) {
+  const opts = { month: 'short', day: 'numeric' };
+  const ys = bounds.start.getFullYear();
+  const ye = bounds.end.getFullYear();
+  if (ys !== ye) {
+    return `${bounds.start.toLocaleDateString('en-US', { ...opts, year: 'numeric' })} – ${bounds.end.toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+  }
+  return `${bounds.start.toLocaleDateString('en-US', opts)} – ${bounds.end.toLocaleDateString('en-US', opts)}, ${ys}`;
+}
+
+function filterEntriesForPeriod(entries, bounds) {
+  return entries.filter(e => {
+    const d = new Date(e.clock_in);
+    return d >= bounds.start && d <= bounds.end;
+  });
+}
+
+function calcHours(entry) {
+  if (!entry.clock_out) return 0;
+  const ms = new Date(entry.clock_out) - new Date(entry.clock_in);
+  return parseFloat((ms / 3600000).toFixed(2));
+}
+
+function totalHours(entries) {
+  return entries.reduce((sum, e) => sum + calcHours(e), 0);
+}
+
+function formatHours(h) {
+  return parseFloat(h.toFixed(2)).toString();
+}
+
+// ============================================================
+// DATE/TIME FORMATTING
+// ============================================================
+function formatTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function toLocalInputValue(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function toISO(localVal) {
+  return new Date(localVal).toISOString();
+}
+
+function formatElapsed(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ============================================================
+// LIVE CLOCK
+// ============================================================
+function startLiveClock() {
+  if (liveClockInterval) clearInterval(liveClockInterval);
+  liveClockInterval = setInterval(updateClock, 1000);
+  updateClock();
+}
+
+function updateClock() {
+  const now = new Date();
+  const el = document.getElementById('live-clock');
+  if (el) {
+    el.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+  }
+  const de = document.getElementById('live-date');
+  if (de) {
+    de.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+}
+
+function startElapsedTimer(clockInTime) {
+  if (elapsedInterval) clearInterval(elapsedInterval);
+  const wrapper = document.getElementById('elapsed-wrapper');
+  const timer = document.getElementById('elapsed-timer');
+  if (wrapper) wrapper.classList.remove('hidden');
+  elapsedInterval = setInterval(() => {
+    const ms = Date.now() - new Date(clockInTime).getTime();
+    if (timer) timer.textContent = formatElapsed(ms);
+  }, 1000);
+}
+
+function stopElapsedTimer() {
+  if (elapsedInterval) clearInterval(elapsedInterval);
+  const wrapper = document.getElementById('elapsed-wrapper');
+  if (wrapper) wrapper.classList.add('hidden');
+}
+
+// ============================================================
+// TOAST NOTIFICATIONS
+// ============================================================
+function showToast(msg, type = 'info', duration = 3500) {
+  const icons = { success: '✅', error: '❌', info: '💡' };
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+  container.appendChild(t);
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(12px)';
+    t.style.transition = 'all 0.3s ease';
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
+// ============================================================
+// THEME
+// ============================================================
+function initTheme() {
+  const saved = localStorage.getItem('laplante-theme') || 'light';
+  setTheme(saved);
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('laplante-theme', theme);
+  const icons = document.querySelectorAll('#theme-btn, #login-theme-icon');
+  icons.forEach(el => { if (el) el.textContent = theme === 'dark' ? '☀️' : '🌙'; });
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+
+// ============================================================
+// LOGIN / AUTH
+// ============================================================
+function buildEmployeeGrid() {
+  const grid = document.getElementById('employee-grid');
+  grid.innerHTML = '';
+  EMPLOYEES.forEach(emp => {
+    const card = document.createElement('div');
+    card.className = 'employee-card';
+    card.innerHTML = `
+      <div class="employee-avatar">${emp.initials}</div>
+      <div class="employee-name">${emp.name}</div>
+      <div class="employee-role">${emp.role}</div>
+    `;
+    card.onclick = () => promptPIN(emp);
+    grid.appendChild(card);
+  });
+}
+
+function promptPIN(employee) {
+  let pin = '';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="text-align:center;max-width:320px;">
+      <div style="font-size:2.5rem;margin-bottom:8px;">${employee.initials}</div>
+      <h3>${employee.name}</h3>
+      <p>Enter your 4-digit PIN to continue</p>
+      <div class="pin-display" id="pin-dots">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div id="pin-error" style="color:#e05252;font-size:0.8rem;min-height:20px;margin-bottom:8px;"></div>
+      <div class="pin-keypad">
+        ${[1,2,3,4,5,6,7,8,9,'','0','⌫'].map(k => `
+          <button class="pin-key${k===''?' hidden':k==='⌫'?' delete':''}" ${k===''?'style="visibility:hidden"':''} onclick="pinPress('${k}')">${k}</button>
+        `).join('')}
+      </div>
+      <button class="btn btn-ghost w-full mt-md" onclick="closePINModal()">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  window._pinEmployee = employee;
+  window._pinValue = '';
+  window._pinOverlay = overlay;
+
+  window.pinPress = (key) => {
+    if (key === '⌫') {
+      window._pinValue = window._pinValue.slice(0, -1);
+    } else if (window._pinValue.length < 4) {
+      window._pinValue += key;
+    }
+    updatePinDots(window._pinValue.length);
+    if (window._pinValue.length === 4) {
+      setTimeout(() => checkPIN(employee, window._pinValue), 100);
+    }
+  };
+
+  // Keyboard support
+  overlay._keyHandler = (e) => {
+    if (e.key >= '0' && e.key <= '9') pinPress(e.key);
+    if (e.key === 'Backspace') pinPress('⌫');
+  };
+  document.addEventListener('keydown', overlay._keyHandler);
+}
+
+function updatePinDots(count) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById(`pd${i}`);
+    if (d) d.classList.toggle('filled', i < count);
+  }
+}
+
+function checkPIN(employee, enteredPIN) {
+  const correct = CONFIG.PINS[employee.id];
+  if (enteredPIN === correct) {
+    closePINModal();
+    loginAs(employee);
+  } else {
+    window._pinValue = '';
+    updatePinDots(0);
+    const errEl = document.getElementById('pin-error');
+    if (errEl) {
+      errEl.textContent = 'Incorrect PIN. Try again.';
+      setTimeout(() => { if (errEl) errEl.textContent = ''; }, 2000);
+    }
+    // Shake animation
+    const modal = window._pinOverlay?.querySelector('.modal');
+    if (modal) {
+      modal.style.animation = 'none';
+      modal.style.transform = 'translateX(-8px)';
+      setTimeout(() => {
+        modal.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+        modal.style.transform = 'translateX(0)';
+      }, 50);
+    }
+  }
+}
+
+window.closePINModal = function() {
+  if (window._pinOverlay) {
+    document.removeEventListener('keydown', window._pinOverlay._keyHandler);
+    window._pinOverlay.remove();
+    window._pinOverlay = null;
+  }
+};
+
+async function loginAs(employee) {
+  currentUser = employee;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
+  const nameEl = document.getElementById('header-user-name');
+  if (nameEl) nameEl.innerHTML = `<strong>${employee.name.split(' ')[0]}</strong>`;
+
+  // Test DB with a short timeout — always continue regardless
+  if (supabaseConfigured) {
+    const connected = await Promise.race([
+      testDbConnection(),
+      new Promise(r => setTimeout(() => r(false), 3000)),
+    ]);
+    if (!connected) showDbWarning();
+  }
+
+  try {
+    settingsCache = await loadSettings();
+  } catch (e) {
+    settingsCache = { period_type: CONFIG.PAY_PERIOD_TYPE, start_day: String(CONFIG.PAY_PERIOD_START_DAY) };
+  }
+  applySettings();
+
+  if (employee.id === CONFIG.ADMIN_EMPLOYEE_ID) {
+    showAdminView();
+  } else {
+    showEmployeeView();
+  }
+
+  setupRealtime();
+}
+
+function logout() {
+  showConfirm('Log Out', 'Are you sure you want to log out?', () => {
+    currentUser = null;
+    currentPeriodOffset = 0;
+    adminPeriodOffset = 0;
+    activeEntry = null;
+    stopElapsedTimer();
+    if (liveClockInterval) clearInterval(liveClockInterval);
+    if (realtimeChannel) clearInterval(realtimeChannel);
+
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('employee-view').classList.add('hidden');
+    document.getElementById('admin-view').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+  });
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function applySettings() {
+  const ptEl = document.getElementById('setting-period-type');
+  const sdEl = document.getElementById('setting-start-day');
+  if (ptEl) ptEl.value = settingsCache.period_type || 'biweekly';
+  if (sdEl) sdEl.value = settingsCache.start_day || '1';
+}
+
+async function saveSettings() {
+  const pt = document.getElementById('setting-period-type')?.value;
+  const sd = document.getElementById('setting-start-day')?.value;
+  if (pt) { settingsCache.period_type = pt; await saveSettingDB('period_type', pt); }
+  if (sd) { settingsCache.start_day = sd; await saveSettingDB('start_day', sd); }
+  showToast('Settings saved', 'success');
+  refreshEmployeeView();
+  refreshAdminOverview();
+}
+
+// ============================================================
+// EMPLOYEE VIEW
+// ============================================================
+async function showEmployeeView() {
+  document.getElementById('employee-view').classList.remove('hidden');
+  document.getElementById('admin-view').classList.add('hidden');
+  startLiveClock();
+  try { await refreshEmployeeView(); } catch(e) { console.error('refreshEmployeeView failed', e); }
+}
+
+async function refreshEmployeeView() {
+  if (!currentUser || currentUser.id === CONFIG.ADMIN_EMPLOYEE_ID) return;
+
+  let entries = [];
+  try { entries = await getEntries(currentUser.id); } catch(e) { entries = []; }
+  activeEntry = entries.find(e => !e.clock_out) || null;
+
+  updateClockButtons();
+
+  const bounds = getPeriodBounds(currentPeriodOffset, settingsCache);
+  const periodEntries = filterEntriesForPeriod(entries, bounds);
+  const todayEntries = entries.filter(e => {
+    const d = new Date(e.clock_in);
+    const t = new Date();
+    return d.toDateString() === t.toDateString();
+  });
+
+  document.getElementById('stat-period-hours').textContent = formatHours(totalHours(periodEntries));
+  document.getElementById('stat-today-hours').textContent = formatHours(totalHours(todayEntries));
+  document.getElementById('stat-shifts').textContent = periodEntries.length;
+
+  document.getElementById('period-label').textContent = formatPeriodLabel(bounds);
+  const sub = document.getElementById('period-sub');
+  if (sub) sub.textContent = `${formatHours(totalHours(periodEntries))} hrs total`;
+
+  const printSub = document.getElementById('print-sub');
+  if (printSub) {
+    printSub.textContent = `${currentUser.name} | ${formatPeriodLabel(bounds)}`;
+  }
+
+  renderEntries(periodEntries, 'entries-list', false);
+}
+
+function updateClockButtons() {
+  const inBtn  = document.getElementById('clock-in-btn');
+  const outBtn = document.getElementById('clock-out-btn');
+  const badge  = document.getElementById('status-badge');
+
+  if (activeEntry) {
+    inBtn?.classList.add('hidden');
+    outBtn?.classList.remove('hidden');
+    badge.textContent = 'Clocked In';
+    badge.className = 'status-badge status-in';
+    startElapsedTimer(activeEntry.clock_in);
+  } else {
+    inBtn?.classList.remove('hidden');
+    outBtn?.classList.add('hidden');
+    badge.textContent = 'Clocked Out';
+    badge.className = 'status-badge status-out';
+    stopElapsedTimer();
+  }
+}
+
+function renderEntries(entries, containerId, isAdmin, adminEmployeeId = null) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const sorted = [...entries].sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
+
+  if (sorted.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⏱</div>
+        <div class="empty-title">No shifts this period</div>
+        <div class="empty-text">No time entries found for the selected pay period.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'entries-list';
+
+  sorted.forEach(entry => {
+    const hours = calcHours(entry);
+    const isOpen = !entry.clock_out;
+    const employeeId = adminEmployeeId || (currentUser?.id);
+
+    const row = document.createElement('div');
+    row.className = `entry-row${isOpen ? ' entry-open' : ''}`;
+
+    row.innerHTML = `
+      <div class="entry-meta">
+        <div class="entry-date">${formatDate(entry.clock_in)}</div>
+        <div class="entry-times">
+          ${formatTime(entry.clock_in)} → ${isOpen ? '<span style="color:#4caf74;">Active</span>' : formatTime(entry.clock_out)}
+        </div>
+        <div class="entry-duration">${isOpen ? '—' : formatHours(hours) + ' hrs'}</div>
+        ${entry.notes ? `<div class="entry-notes">📝 ${entry.notes}</div>` : ''}
+      </div>
+      <div class="entry-actions no-print">
+        <button class="entry-btn entry-btn-edit" onclick="editEntry('${entry.id}', '${employeeId}')" title="Edit">✏️</button>
+        <button class="entry-btn entry-btn-delete" onclick="confirmDeleteEntry('${entry.id}', '${employeeId}')" title="Delete">🗑</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  container.appendChild(list);
+}
+
+// ============================================================
+// CLOCK IN / OUT
+// ============================================================
+async function clockIn() {
+  if (!currentUser) return;
+
+  // Check no open shift
+  const existing = await getOpenEntry(currentUser.id);
+  if (existing) {
+    showToast('You already have an active shift!', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('clock-in-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Clocking in...'; }
+
+  const entry = {
+    employee_id: currentUser.id,
+    clock_in: new Date().toISOString(),
+    clock_out: null,
+    total_hours: null,
+    notes: '',
+  };
+
+  const { error } = await insertEntry(entry);
+  if (error) {
+    showToast('Failed to clock in: ' + error.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '⏱ Clock In'; }
+    return;
+  }
+
+  showToast('Clocked in successfully!', 'success');
+  await refreshEmployeeView();
+}
+
+async function clockOut() {
+  if (!activeEntry) return;
+
+  const btn = document.getElementById('clock-out-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Clocking out...'; }
+
+  // Prompt for notes
+  showNotesModal(async (notes) => {
+    const now = new Date().toISOString();
+    const hours = calcHours({ clock_in: activeEntry.clock_in, clock_out: now });
+
+    const { error } = await updateEntry(activeEntry.id, {
+      clock_out: now,
+      total_hours: hours,
+      notes: notes || '',
+    });
+
+    if (error) {
+      showToast('Failed to clock out: ' + error.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '⏹ Clock Out'; }
+      return;
+    }
+
+    showToast('Clocked out successfully!', 'success');
+    activeEntry = null;
+    await refreshEmployeeView();
+  }, () => {
+    if (btn) { btn.disabled = false; btn.textContent = '⏹ Clock Out'; }
+  });
+}
+
+function showNotesModal(onConfirm, onCancel) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Clock Out</h3>
+      <p>Add an optional note for this shift.</p>
+      <div class="form-group">
+        <label class="form-label">Shift Notes (Optional)</label>
+        <textarea id="notes-input" rows="3" placeholder="e.g., field inspection ran long, ran late due to traffic..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-ghost" id="notes-cancel">Cancel</button>
+        <button class="btn btn-primary" id="notes-confirm">Clock Out</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('notes-input')?.focus();
+
+  document.getElementById('notes-confirm').onclick = () => {
+    const notes = document.getElementById('notes-input')?.value || '';
+    overlay.remove();
+    onConfirm(notes);
+  };
+  document.getElementById('notes-cancel').onclick = () => {
+    overlay.remove();
+    if (onCancel) onCancel();
+  };
+}
+
+// ============================================================
+// EDIT ENTRY
+// ============================================================
+async function editEntry(entryId, employeeId) {
+  // Fetch the entry
+  let entries;
+  if (supabaseConfigured) {
+    const { data } = await db.from('time_entries').select('*').eq('id', entryId).single().get();
+    entries = data ? [data] : [];
+  } else {
+    entries = memoryStore.entries.filter(e => e.id === entryId);
+  }
+  const entry = entries[0];
+  if (!entry) { showToast('Entry not found', 'error'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Edit Shift</h3>
+      <p>${formatDate(entry.clock_in)}</p>
+      <div class="form-group">
+        <label class="form-label">Clock In</label>
+        <input type="datetime-local" id="edit-in" value="${toLocalInputValue(entry.clock_in)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Clock Out</label>
+        <input type="datetime-local" id="edit-out" value="${toLocalInputValue(entry.clock_out)}" placeholder="Leave blank if still active">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="edit-notes" rows="2">${entry.notes || ''}</textarea>
+      </div>
+      <div id="edit-error" style="color:#e05252;font-size:0.8rem;margin-bottom:12px;min-height:18px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-primary" id="edit-save-btn">Save Changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('edit-save-btn').onclick = async () => {
+    const inVal  = document.getElementById('edit-in')?.value;
+    const outVal = document.getElementById('edit-out')?.value;
+    const notes  = document.getElementById('edit-notes')?.value;
+    const errEl  = document.getElementById('edit-error');
+
+    if (!inVal) { if (errEl) errEl.textContent = 'Clock-in time is required.'; return; }
+
+    const clockIn  = toISO(inVal);
+    const clockOut = outVal ? toISO(outVal) : null;
+
+    if (clockOut && new Date(clockOut) <= new Date(clockIn)) {
+      if (errEl) errEl.textContent = 'Clock-out must be after clock-in.'; return;
+    }
+
+    const hours = clockOut ? calcHours({ clock_in: clockIn, clock_out: clockOut }) : null;
+
+    const { error } = await updateEntry(entryId, { clock_in: clockIn, clock_out: clockOut, total_hours: hours, notes: notes || '' });
+    if (error) { if (errEl) errEl.textContent = 'Save failed: ' + error.message; return; }
+
+    overlay.remove();
+    showToast('Entry updated!', 'success');
+    if (currentUser?.id === CONFIG.ADMIN_EMPLOYEE_ID) {
+      refreshAdminOverview();
+      if (adminDrilldownEmployee) openAdminDrilldown(adminDrilldownEmployee);
+    } else {
+      await refreshEmployeeView();
+    }
+  };
+}
+
+// ============================================================
+// DELETE ENTRY
+// ============================================================
+function confirmDeleteEntry(entryId, employeeId) {
+  showConfirm('Delete Shift', 'Are you sure you want to delete this shift? This cannot be undone.', async () => {
+    const { error } = await deleteEntry(entryId);
+    if (error) { showToast('Delete failed', 'error'); return; }
+    showToast('Shift deleted', 'success');
+    if (currentUser?.id === CONFIG.ADMIN_EMPLOYEE_ID) {
+      refreshAdminOverview();
+      if (adminDrilldownEmployee) openAdminDrilldown(adminDrilldownEmployee);
+    } else {
+      await refreshEmployeeView();
+    }
+  });
+}
+
+// ============================================================
+// CONFIRM DIALOG
+// ============================================================
+function showConfirm(title, message, onConfirm, confirmLabel = 'Confirm') {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${title}</h3>
+      <p>${message}</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-danger" id="confirm-btn">${confirmLabel}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('confirm-btn').onclick = () => {
+    overlay.remove();
+    onConfirm();
+  };
+}
+
+// ============================================================
+// PAY PERIOD NAVIGATION
+// ============================================================
+function changePeriod(dir) {
+  currentPeriodOffset += dir;
+  refreshEmployeeView();
+}
+
+function changeAdminPeriod(dir) {
+  adminPeriodOffset += dir;
+  refreshAdminOverview();
+  refreshPayrollTab();
+}
+
+// ============================================================
+// ADMIN VIEW
+// ============================================================
+async function showAdminView() {
+  document.getElementById('admin-view').classList.remove('hidden');
+  document.getElementById('employee-view').classList.add('hidden');
+  await refreshAdminOverview();
+  startAdminPolling();
+}
+
+async function refreshAdminOverview() {
+  const bounds = getPeriodBounds(adminPeriodOffset, settingsCache);
+  const label = formatPeriodLabel(bounds);
+
+  const periodLabelEl = document.getElementById('admin-period-label');
+  if (periodLabelEl) periodLabelEl.textContent = label;
+  const adminPeriodSubEl = document.getElementById('admin-period-sub');
+  if (adminPeriodSubEl) adminPeriodSubEl.textContent = '';
+
+  const allEntries = await getAllEntries();
+  const periodEntries = filterEntriesForPeriod(allEntries, bounds);
+
+  // Active employees (currently clocked in)
+  const activeEmployees = allEntries.filter(e => !e.clock_out).map(e => e.employee_id);
+  const uniqueActive = [...new Set(activeEmployees)];
+
+  document.getElementById('admin-stat-total').textContent = formatHours(totalHours(periodEntries));
+  document.getElementById('admin-stat-active').textContent = uniqueActive.length;
+  document.getElementById('admin-stat-shifts').textContent = periodEntries.length;
+
+  const cardsContainer = document.getElementById('admin-employee-cards');
+  if (!cardsContainer) return;
+
+  cardsContainer.innerHTML = '';
+
+  EMPLOYEES.forEach(emp => {
+    const empEntries = periodEntries.filter(e => e.employee_id === emp.id);
+    const empHours = totalHours(empEntries);
+    const isActive = uniqueActive.includes(emp.id);
+
+    const card = document.createElement('div');
+    card.className = 'employee-summary-card';
+    card.onclick = () => openAdminDrilldown(emp);
+
+    card.innerHTML = `
+      <div class="employee-summary-header">
+        <div class="employee-summary-avatar">${emp.initials}</div>
+        <div style="flex:1;">
+          <div class="employee-summary-name">${emp.name}</div>
+          <div class="employee-summary-role">${emp.role}</div>
+        </div>
+        ${isActive ? '<div class="active-indicator" title="Currently clocked in"></div>' : ''}
+      </div>
+      <div class="employee-summary-stats">
+        <div class="summary-stat">
+          <div class="summary-stat-value">${formatHours(empHours)}</div>
+          <div class="summary-stat-label">Period Hours</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value">${empEntries.length}</div>
+          <div class="summary-stat-label">Shifts</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="font-size:1rem;${isActive ? 'color:#4caf74;' : 'color:var(--text-subtle);'}">${isActive ? 'Active' : 'Off'}</div>
+          <div class="summary-stat-label">Status</div>
+        </div>
+      </div>
+    `;
+    cardsContainer.appendChild(card);
+  });
+
+  if (adminDrilldownEmployee) {
+    await openAdminDrilldown(adminDrilldownEmployee);
+  }
+
+  refreshPayrollTab();
+}
+
+async function openAdminDrilldown(employee) {
+  adminDrilldownEmployee = employee;
+  const drilldown = document.getElementById('admin-drilldown');
+  const content = document.getElementById('admin-drilldown-content');
+  if (!drilldown || !content) return;
+
+  drilldown.classList.remove('hidden');
+  document.getElementById('admin-employee-cards').classList.add('hidden');
+
+  const allEntries = await getAllEntries();
+  const bounds = getPeriodBounds(adminPeriodOffset, settingsCache);
+  const empEntries = filterEntriesForPeriod(allEntries.filter(e => e.employee_id === employee.id), bounds);
+  const empHours = totalHours(empEntries);
+  const isActive = allEntries.some(e => e.employee_id === employee.id && !e.clock_out);
+
+  content.innerHTML = `
+    <div class="card" style="margin-bottom:20px;">
+      <div class="employee-summary-header" style="margin-bottom:0;">
+        <div class="employee-summary-avatar">${employee.initials}</div>
+        <div>
+          <div class="employee-summary-name">${employee.name}</div>
+          <div class="employee-summary-role">${employee.role}</div>
+        </div>
+        ${isActive ? '<span class="status-badge status-in">Active</span>' : '<span class="status-badge status-out">Off</span>'}
+      </div>
+    </div>
+    <div class="stats-grid" style="margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-value">${formatHours(empHours)}</div><div class="stat-label">Period Hours</div></div>
+      <div class="stat-card"><div class="stat-value">${empEntries.length}</div><div class="stat-label">Shifts</div></div>
+    </div>
+    <div class="section-header">
+      <h3 class="section-title" style="font-size:1rem;">Shift History</h3>
+      <span style="font-size:0.8rem;color:var(--text-subtle);">${formatPeriodLabel(bounds)}</span>
+    </div>
+    <div id="drilldown-entries"></div>
+  `;
+
+  renderEntries(empEntries, 'drilldown-entries', true, employee.id);
+}
+
+function closeAdminDrilldown() {
+  adminDrilldownEmployee = null;
+  document.getElementById('admin-drilldown').classList.add('hidden');
+  document.getElementById('admin-employee-cards').classList.remove('hidden');
+}
+
+// ============================================================
+// ADMIN TABS
+// ============================================================
+function switchAdminTab(tab) {
+  adminActiveTab = tab;
+  ['overview', 'payroll', 'settings'].forEach(t => {
+    const btn = document.getElementById(`tab-${t}`);
+    const content = document.getElementById(`tab-content-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (content) content.classList.toggle('hidden', t !== tab);
+  });
+  if (tab === 'payroll') refreshPayrollTab();
+}
+
+async function refreshPayrollTab() {
+  const bounds = getPeriodBounds(adminPeriodOffset, settingsCache);
+  const label = formatPeriodLabel(bounds);
+
+  const plLabel = document.getElementById('payroll-period-label');
+  if (plLabel) plLabel.textContent = label;
+
+  const payrollInfo = document.getElementById('payroll-period-info');
+  if (payrollInfo) payrollInfo.textContent = label;
+
+  const adminPS = document.getElementById('admin-print-sub');
+  if (adminPS) adminPS.textContent = `All Employees | ${label}`;
+
+  const wrapper = document.getElementById('payroll-table-wrapper');
+  if (!wrapper) return;
+
+  const allEntries = await getAllEntries();
+  const periodEntries = filterEntriesForPeriod(allEntries, bounds);
+
+  if (periodEntries.length === 0) {
+    wrapper.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data for this period</div></div>`;
+    return;
+  }
+
+  let html = `<div class="scroll-x"><table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border);">
+        <th style="text-align:left;padding:10px 12px;color:var(--text-subtle);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Employee</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text-subtle);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Date</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text-subtle);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Clock In</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text-subtle);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Clock Out</th>
+        <th style="text-align:right;padding:10px 12px;color:var(--text-subtle);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Hours</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text-subtle);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;">Notes</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  let lastEmpId = null;
+  const sorted = [...periodEntries].sort((a, b) => {
+    if (a.employee_id !== b.employee_id) return a.employee_id.localeCompare(b.employee_id);
+    return new Date(b.clock_in) - new Date(a.clock_in);
+  });
+
+  let empTotals = {};
+  sorted.forEach(entry => {
+    const emp = EMPLOYEES.find(e => e.id === entry.employee_id);
+    if (entry.employee_id !== lastEmpId) {
+      if (lastEmpId && empTotals[lastEmpId] !== undefined) {
+        html += `<tr style="background:rgba(154,149,89,0.05);border-top:1px solid var(--border);">
+          <td colspan="4" style="padding:8px 12px;font-weight:600;color:var(--text-muted);font-size:0.8rem;text-align:right;">Subtotal</td>
+          <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--gold);">${formatHours(empTotals[lastEmpId])} hrs</td>
+          <td></td>
+        </tr>`;
+      }
+      lastEmpId = entry.employee_id;
+      empTotals[entry.employee_id] = 0;
+    }
+    const h = calcHours(entry);
+    empTotals[entry.employee_id] += h;
+
+    html += `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 12px;font-weight:500;">${emp?.name || entry.employee_id}</td>
+      <td style="padding:10px 12px;color:var(--text-muted);">${formatDate(entry.clock_in)}</td>
+      <td style="padding:10px 12px;">${formatTime(entry.clock_in)}</td>
+      <td style="padding:10px 12px;">${entry.clock_out ? formatTime(entry.clock_out) : '<span style="color:#4caf74;">Active</span>'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:600;color:var(--gold);">${entry.clock_out ? formatHours(h) : '—'}</td>
+      <td style="padding:10px 12px;color:var(--text-muted);font-style:italic;font-size:0.8rem;">${entry.notes || ''}</td>
+    </tr>`;
+  });
+
+  // Final subtotal
+  if (lastEmpId && empTotals[lastEmpId] !== undefined) {
+    html += `<tr style="background:rgba(154,149,89,0.05);border-top:1px solid var(--border);">
+      <td colspan="4" style="padding:8px 12px;font-weight:600;color:var(--text-muted);font-size:0.8rem;text-align:right;">Subtotal</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--gold);">${formatHours(empTotals[lastEmpId])} hrs</td>
+      <td></td>
+    </tr>`;
+  }
+
+  const grandTotal = totalHours(periodEntries);
+  html += `<tr style="border-top:2px solid var(--gold);background:rgba(154,149,89,0.08);">
+    <td colspan="4" style="padding:12px;font-weight:700;color:var(--text);">TOTAL</td>
+    <td style="padding:12px;text-align:right;font-weight:700;font-family:var(--font-display);font-size:1.1rem;color:var(--gold);">${formatHours(grandTotal)} hrs</td>
+    <td></td>
+  </tr></tbody></table></div>`;
+
+  wrapper.innerHTML = html;
+}
+
+// ============================================================
+// REALTIME (polling every 30s for admin)
+// ============================================================
+function setupRealtime() {
+  if (!supabaseConfigured) return;
+  if (currentUser?.id !== CONFIG.ADMIN_EMPLOYEE_ID) return;
+}
+
+function startAdminPolling() {
+  if (realtimeChannel) clearInterval(realtimeChannel);
+  realtimeChannel = setInterval(async () => {
+    if (currentUser?.id === CONFIG.ADMIN_EMPLOYEE_ID) {
+      await refreshAdminOverview();
+    }
+  }, 30000);
+}
+
+// ============================================================
+// PRINT
+// ============================================================
+function printReport() {
+  window.print();
+}
+
+function printAdminReport() {
+  window.print();
+}
+
+// ============================================================
+// CONNECTION STATUS
+// ============================================================
+function showConnBar(msg, type) {
+  const bar = document.getElementById('conn-bar');
+  bar.textContent = msg;
+  bar.className = `conn-bar show ${type}`;
+}
+function hideConnBar() {
+  const bar = document.getElementById('conn-bar');
+  bar.classList.remove('show');
+}
+
+window.addEventListener('offline', () => showConnBar('⚠️ You are offline. Changes will be saved when reconnected.', 'offline'));
+window.addEventListener('online', () => {
+  showConnBar('✅ Back online!', 'reconnecting');
+  setTimeout(hideConnBar, 3000);
+});
+
+// ============================================================
+// SETUP MODAL
+// ============================================================
+function continueWithoutSupabase() {
+  document.getElementById('setup-modal').classList.add('hidden');
+  showToast('Running in offline/demo mode. Data will not persist.', 'info', 5000);
+}
+
+// ============================================================
+// APP INIT
+// ============================================================
+async function init() {
+  initTheme();
+
+  // Check Supabase config
+  supabaseConfigured = initSupabase();
+
+  // Small loading delay for polish
+  await new Promise(r => setTimeout(r, 800));
+
+  const loadingScreen = document.getElementById('loading-screen');
+  loadingScreen.style.opacity = '0';
+  setTimeout(() => loadingScreen.classList.add('hidden'), 400);
+
+  buildEmployeeGrid();
+  document.getElementById('login-screen').classList.remove('hidden');
+
+  if (!supabaseConfigured) {
+    document.getElementById('setup-modal').classList.remove('hidden');
+  }
+}
+
+// Start app
+init().catch(err => {
+  console.error('Init error:', err);
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  buildEmployeeGrid();
+});
+</script>
+
+<!-- ============================================================
+     SUPABASE SETUP DOCUMENTATION (in source comments)
+
+     SQL SCHEMA — run this in your Supabase SQL Editor:
+     =====================================================
+
+     CREATE TABLE employees (
+       id TEXT PRIMARY KEY,
+       name TEXT NOT NULL,
+       role TEXT,
+       created_at TIMESTAMPTZ DEFAULT NOW()
+     );
+
+     CREATE TABLE time_entries (
+       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+       employee_id TEXT REFERENCES employees(id) ON DELETE CASCADE,
+       clock_in TIMESTAMPTZ NOT NULL,
+       clock_out TIMESTAMPTZ,
+       total_hours NUMERIC(5,2),
+       notes TEXT DEFAULT '',
+       created_at TIMESTAMPTZ DEFAULT NOW(),
+       updated_at TIMESTAMPTZ DEFAULT NOW()
+     );
+
+     CREATE TABLE app_settings (
+       key TEXT PRIMARY KEY,
+       value TEXT NOT NULL,
+       updated_at TIMESTAMPTZ DEFAULT NOW()
+     );
+
+     CREATE INDEX idx_entries_employee ON time_entries(employee_id);
+     CREATE INDEX idx_entries_clock_in ON time_entries(clock_in);
+     CREATE INDEX idx_entries_open ON time_entries(employee_id) WHERE clock_out IS NULL;
+
+     ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+     ALTER TABLE time_entries ENABLE ROW LEVEL SECURITY;
+     ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+     CREATE POLICY "Allow all" ON employees FOR ALL USING (true) WITH CHECK (true);
+     CREATE POLICY "Allow all" ON time_entries FOR ALL USING (true) WITH CHECK (true);
+     CREATE POLICY "Allow all" ON app_settings FOR ALL USING (true) WITH CHECK (true);
+
+     INSERT INTO employees (id, name, role) VALUES
+       ('lovelyn-relayo',   'Lovelyn Relayo',   'Operations Specialist'),
+       ('gabriella-welker', 'Gabriella Welker', 'Appraisal Assistant Intern'),
+       ('kari-lang',        'Kari Lang',        'Owner / Administrator');
+
+     INSERT INTO app_settings (key, value) VALUES
+       ('period_type', 'biweekly'),
+       ('start_day', '1');
+
+     =====================================================
+     SETUP STEPS:
+     1. Go to https://supabase.com and create a free project
+     2. Go to SQL Editor and run the schema above
+     3. Go to Project Settings → API
+     4. Copy "Project URL" → paste into CONFIG.SUPABASE_URL
+     5. Copy "anon / public" key → paste into CONFIG.SUPABASE_ANON_KEY
+     6. Save the file
+     7. Deploy to Netlify: drag this HTML file to netlify.com/drop
+
+     DEFAULT PINs (edit in CONFIG.PINS near top of script):
+     - Lovelyn Relayo:   1234
+     - Gabriella Welker: 2345
+     - Kari Lang (Admin): 0000
+     ============================================================ -->
+
+</body>
+</html>
