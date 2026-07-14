@@ -1215,27 +1215,42 @@ const CONFIG = {
 
 // ============================================================
 // EMPLOYEES DATA
+// Starts as hardcoded fallback; replaced by Supabase data on load.
+// Always use the EMPLOYEES array — do NOT hardcode names elsewhere.
 // ============================================================
-const EMPLOYEES = [
-  {
-    id: 'lovelyn-relayo',
-    name: 'Lovelyn Relayo',
-    role: 'Operations Specialist',
-    initials: 'LR',
-  },
-  {
-    id: 'gabriella-welker',
-    name: 'Gabriella Welker',
-    role: 'Appraisal Assistant Intern',
-    initials: 'GW',
-  },
-  {
-    id: 'kari-lang',
-    name: 'Kari Lang',
-    role: 'Owner / Administrator',
-    initials: 'KL',
-  },
+let EMPLOYEES = [
+  { id: 'lovelyn-relayo',   name: 'Lovelyn Relayo',   role: 'Operations Specialist',      initials: 'LR', active: true },
+  { id: 'gabriella-welker', name: 'Gabriella Welker', role: 'Appraisal Assistant Intern', initials: 'GW', active: true },
+  { id: 'kari-lang',        name: 'Kari Lang',        role: 'Owner / Administrator',      initials: 'KL', active: true },
 ];
+
+// Load all employees from Supabase and sync into the EMPLOYEES array.
+// Called once on app init, and again after adding/editing/deactivating.
+async function loadEmployeesFromSupabase() {
+  if (!supabaseConfigured || !dbReachable) return; // keep hardcoded fallback
+  try {
+    const { data, error } = await db.from('employees').select('*').order('name', { ascending: true }).get();
+    if (error || !data || data.length === 0) return;
+
+    // Replace the entire EMPLOYEES array with Supabase data
+    EMPLOYEES = data.map(row => ({
+      id:       row.id,
+      name:     row.name,
+      role:     row.role || '',
+      initials: getInitials(row.name),
+      active:   row.active !== false, // treat null/undefined as active
+      pin:      row.pin || null,      // optional pin column in DB
+    }));
+
+    // Sync DB-stored PINs into CONFIG.PINS so checkPIN() always works
+    EMPLOYEES.forEach(emp => {
+      if (emp.pin) CONFIG.PINS[emp.id] = emp.pin;
+    });
+  } catch (e) {
+    console.warn('Could not load employees from Supabase:', e.message);
+    // Keep hardcoded fallback — app still works offline
+  }
+}
 </script>
 
 <!-- ============================================================
@@ -2245,6 +2260,9 @@ async function loginAs(employee) {
     if (!connected) showDbWarning();
   }
 
+  // Reload employees from Supabase so any additions since page load appear
+  await loadEmployeesFromSupabase();
+
   try {
     settingsCache = await loadSettings();
   } catch (e) {
@@ -2274,6 +2292,8 @@ function logout() {
     document.getElementById('app').classList.add('hidden');
     document.getElementById('employee-view').classList.add('hidden');
     document.getElementById('admin-view').classList.add('hidden');
+    // Reload employees from Supabase so login screen is always up-to-date
+    loadEmployeesFromSupabase().then(() => buildEmployeeGrid()).catch(() => buildEmployeeGrid());
     document.getElementById('login-screen').classList.remove('hidden');
   });
 }
@@ -2987,22 +3007,26 @@ async function addTeamMember() {
     showToast('An employee with a similar name already exists.', 'error'); return;
   }
 
-  // Save to Supabase employees table (same structure: id TEXT, name TEXT, role TEXT)
+  // Save to Supabase employees table — includes pin column if it exists
+  const finalPin = pin || '0000';
   if (supabaseConfigured && dbReachable) {
     try {
-      const res = await db.from('employees').insert({ id, name, role });
-      if (res.error) throw res.error;
+      // Try with pin column first; fall back without it if column doesn't exist
+      let res = await db.from('employees').insert({ id, name, role, active: true, pin: finalPin });
+      if (res.error && res.error.message && res.error.message.includes('pin')) {
+        // pin column doesn't exist yet — insert without it
+        res = await db.from('employees').insert({ id, name, role, active: true });
+        if (res.error) throw res.error;
+      } else if (res.error) {
+        throw res.error;
+      }
     } catch (e) {
       showToast('Could not save to database: ' + e.message, 'error'); return;
     }
   }
 
-  // Add to runtime EMPLOYEES array so app reflects immediately
-  const newEmp = { id, name, role, initials: getInitials(name), active: true };
-  EMPLOYEES.push(newEmp);
-
-  // Register PIN in CONFIG
-  CONFIG.PINS[id] = pin || '0000';
+  // Register PIN in CONFIG immediately so login works this session
+  CONFIG.PINS[id] = finalPin;
 
   // Reset form
   nameEl.value = ''; roleEl.value = ''; pinEl.value = '';
@@ -3011,7 +3035,10 @@ async function addTeamMember() {
 
   showToast(name + ' added to the team!', 'success');
 
-  // Refresh team list and employee login grid
+  // Reload employees from Supabase so EMPLOYEES array is fully in sync
+  await loadEmployeesFromSupabase();
+
+  // Refresh UI
   renderTeamMemberList();
   buildEmployeeGrid();
 }
@@ -3021,18 +3048,13 @@ async function renderTeamMemberList() {
   const container = document.getElementById('team-member-list');
   if (!container) return;
 
-  // Load from Supabase if connected, else use EMPLOYEES array
-  let members = [];
+  // Always re-fetch from Supabase to get the freshest data,
+  // then fall back to the in-memory EMPLOYEES array if unavailable
   if (supabaseConfigured && dbReachable) {
-    try {
-      const { data } = await db.from('employees').select('*').order('name', { ascending: true }).get();
-      members = data || [];
-    } catch (e) {
-      members = EMPLOYEES.map(e => ({ ...e }));
-    }
-  } else {
-    members = EMPLOYEES.map(e => ({ ...e }));
+    await loadEmployeesFromSupabase();
   }
+
+  const members = EMPLOYEES.map(e => ({ ...e }));
 
   if (members.length === 0) {
     container.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">👥</div><div class="empty-title">No team members yet</div></div>';
@@ -3137,6 +3159,8 @@ function editTeamMember(empId) {
 
     overlay.remove();
     showToast('Team member updated!', 'success');
+    // Reload from Supabase so all views stay in sync
+    await loadEmployeesFromSupabase();
     renderTeamMemberList();
     buildEmployeeGrid();
   };
@@ -3168,8 +3192,10 @@ async function deactivateTeamMember(empId) {
       if (idx >= 0) EMPLOYEES[idx].active = false;
 
       showToast('Team member deactivated.', 'info');
+      // Reload from Supabase so login screen updates immediately
+      await loadEmployeesFromSupabase();
       renderTeamMemberList();
-      buildEmployeeGrid(); // Removes them from login screen
+      buildEmployeeGrid();
     },
     'Deactivate'
   );
@@ -3189,6 +3215,7 @@ async function reactivateTeamMember(empId) {
   if (idx >= 0) EMPLOYEES[idx].active = true;
 
   showToast('Team member reactivated!', 'success');
+  await loadEmployeesFromSupabase();
   renderTeamMemberList();
   buildEmployeeGrid();
 }
@@ -3199,11 +3226,24 @@ async function reactivateTeamMember(empId) {
 async function init() {
   initTheme();
 
-  // Check Supabase config
+  // Connect Supabase
   supabaseConfigured = initSupabase();
 
-  // Small loading delay for polish
-  await new Promise(r => setTimeout(r, 800));
+  // Test DB connection with a 4-second timeout
+  if (supabaseConfigured) {
+    const connected = await Promise.race([
+      testDbConnection(),
+      new Promise(r => setTimeout(() => r(false), 4000)),
+    ]);
+    if (!connected) showDbWarning();
+  }
+
+  // Load employees from Supabase (replaces hardcoded list)
+  // Always completes before showing the login screen
+  await loadEmployeesFromSupabase();
+
+  // Brief polish delay so loading screen doesn't flash
+  await new Promise(r => setTimeout(r, 400));
 
   const loadingScreen = document.getElementById('loading-screen');
   loadingScreen.style.opacity = '0';
@@ -3271,10 +3311,14 @@ init().catch(err => {
      CREATE POLICY "Allow all" ON time_entries FOR ALL USING (true) WITH CHECK (true);
      CREATE POLICY "Allow all" ON app_settings FOR ALL USING (true) WITH CHECK (true);
 
-     INSERT INTO employees (id, name, role) VALUES
-       ('lovelyn-relayo',   'Lovelyn Relayo',   'Operations Specialist'),
-       ('gabriella-welker', 'Gabriella Welker', 'Appraisal Assistant Intern'),
-       ('kari-lang',        'Kari Lang',        'Owner / Administrator');
+     -- If upgrading an existing table, run this to add the pin column:
+     ALTER TABLE employees ADD COLUMN IF NOT EXISTS pin TEXT;
+     ALTER TABLE employees ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
+
+     INSERT INTO employees (id, name, role, active) VALUES
+       ('lovelyn-relayo',   'Lovelyn Relayo',   'Operations Specialist',      true),
+       ('gabriella-welker', 'Gabriella Welker', 'Appraisal Assistant Intern', true),
+       ('kari-lang',        'Kari Lang',        'Owner / Administrator',      true);
 
      INSERT INTO app_settings (key, value) VALUES
        ('period_type', 'biweekly'),
