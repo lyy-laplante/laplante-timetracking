@@ -3136,10 +3136,20 @@ function editTeamMember(empId) {
       errEl.textContent = 'PIN must be exactly 4 digits.'; return;
     }
 
-    // Update Supabase
+    // A PIN reset must be saved to Supabase so it survives logout/reload.
+    // Do not report a successful PIN change if the database is unavailable.
+    if (newPin && (!supabaseConfigured || !dbReachable)) {
+      errEl.textContent = 'Cannot save PIN while the database is offline. Please reconnect and try again.';
+      return;
+    }
+
+    // Update Supabase. Only include pin when a new PIN was entered;
+    // leaving the PIN field blank keeps the existing database PIN unchanged.
     if (supabaseConfigured && dbReachable) {
       try {
-        const res = await db.from('employees').eq('id', empId).update({ name: newName, role: newRole });
+        const employeePatch = { name: newName, role: newRole };
+        if (newPin) employeePatch.pin = newPin;
+        const res = await db.from('employees').eq('id', empId).update(employeePatch);
         if (res.error) throw res.error;
       } catch (e) {
         errEl.textContent = 'Save failed: ' + e.message; return;
@@ -3152,9 +3162,10 @@ function editTeamMember(empId) {
       EMPLOYEES[idx].name = newName;
       EMPLOYEES[idx].role = newRole;
       EMPLOYEES[idx].initials = getInitials(newName);
+      if (newPin) EMPLOYEES[idx].pin = newPin;
     }
 
-    // Update PIN if provided
+    // Keep the in-memory PIN map in sync immediately.
     if (newPin) CONFIG.PINS[empId] = newPin;
 
     overlay.remove();
